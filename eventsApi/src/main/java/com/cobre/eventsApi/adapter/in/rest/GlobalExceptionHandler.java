@@ -6,6 +6,7 @@ import com.cobre.eventsApi.domain.exception.EventAlreadyInProgressException;
 import com.cobre.eventsApi.domain.exception.EventNotFoundException;
 import com.cobre.eventsApi.domain.exception.InvalidTokenException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -19,6 +20,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidTokenException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ErrorResponse handleInvalidToken(InvalidTokenException ex) {
+        return new ErrorResponse("UNAUTHORIZED", ex.getMessage(), UUID.randomUUID().toString());
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleMissingHeader(MissingRequestHeaderException ex) {
         return new ErrorResponse("UNAUTHORIZED", ex.getMessage(), UUID.randomUUID().toString());
     }
 
