@@ -10,18 +10,19 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
+import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
 public class JsonNotificationEventRepository implements NotificationEventRepository {
 
     private final String dataPath;
     private final ObjectMapper objectMapper;
-    private List<NotificationEvent> events = new ArrayList<>();
+    private final List<NotificationEvent> events = new CopyOnWriteArrayList<>();
 
     public JsonNotificationEventRepository(
             @Value("${notification.events.data.path}") String dataPath,
@@ -31,16 +32,14 @@ public class JsonNotificationEventRepository implements NotificationEventReposit
     }
 
     @PostConstruct
-    void load() throws Exception {
+    void load() throws IOException {
         ClassPathResource resource = new ClassPathResource(dataPath);
         try (InputStream is = resource.getInputStream()) {
             JsonNode root = objectMapper.readTree(is);
             JsonNode eventsNode = root.isArray() ? root : root.path("events");
-            List<NotificationEvent> loaded = new ArrayList<>();
             for (JsonNode node : eventsNode) {
-                loaded.add(map(node));
+                events.add(map(node));
             }
-            this.events = loaded;
         }
     }
 
@@ -50,7 +49,19 @@ public class JsonNotificationEventRepository implements NotificationEventReposit
                 ? Instant.parse(deliveryDateStr) : null;
 
         String statusStr = node.path("delivery_status").asText("PENDING");
-        DeliveryStatus status = DeliveryStatus.valueOf(statusStr.toUpperCase());
+        DeliveryStatus status;
+        try {
+            status = DeliveryStatus.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "Unknown delivery_status '%s' for event '%s'".formatted(statusStr, node.path("event_id").asText()), e);
+        }
+
+        JsonNode httpNode = node.path("http_status_code");
+        Integer httpStatusCode = (!httpNode.isMissingNode() && !httpNode.isNull()) ? httpNode.asInt() : null;
+
+        JsonNode errNode = node.path("error_details");
+        String errorDetails = (!errNode.isMissingNode() && !errNode.isNull()) ? errNode.asText() : null;
 
         return new NotificationEvent(
                 node.path("event_id").asText(),
@@ -61,8 +72,8 @@ public class JsonNotificationEventRepository implements NotificationEventReposit
                 deliveryDate,   // deliveryDate
                 node.path("client_id").asText(),
                 node.path("retry_count").asInt(0),
-                node.path("http_status_code").isNull() ? null : node.path("http_status_code").asInt(),
-                node.path("error_details").isNull() ? null : node.path("error_details").asText()
+                httpStatusCode,
+                errorDetails
         );
     }
 
