@@ -1,0 +1,30 @@
+meta {
+  name: List Events
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/notification_events
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.page: eq 1
+  res.body.pageSize: eq 20
+  res.body.totalItems: isNumber
+  res.body.totalPages: isNumber
+  res.body.data: isArray
+  res.body.data[0].eventId: isDefined
+  res.body.data[0].eventType: isDefined
+  res.body.data[0].content: isDefined
+  res.body.data[0].deliveryStatus: isDefined
+  res.body.data[0].creationDate: isDefined
+  res.body.data[0].clientId: isUndefined
+}

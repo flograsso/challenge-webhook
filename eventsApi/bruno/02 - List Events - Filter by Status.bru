@@ -1,0 +1,29 @@
+meta {
+  name: List Events - Filter by Status
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/notification_events?status=COMPLETED
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("all results have COMPLETED status", function() {
+    const data = res.body.data;
+    data.forEach(event => {
+      expect(event.deliveryStatus).to.equal("COMPLETED");
+    });
+  });
+}

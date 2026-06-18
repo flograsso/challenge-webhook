@@ -1,0 +1,20 @@
+meta {
+  name: List Events - Multi Status Filter
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/notification_events?status=COMPLETED&status=FAILED
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}

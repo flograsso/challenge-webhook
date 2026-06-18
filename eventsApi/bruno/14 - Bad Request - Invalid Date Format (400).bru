@@ -1,0 +1,22 @@
+meta {
+  name: Bad Request - Invalid Date Format (400)
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/notification_events?dateFrom=not-a-date
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 400
+  res.body.code: eq INVALID_DATE_FORMAT
+  res.body.message: isDefined
+  res.body.traceId: isDefined
+}

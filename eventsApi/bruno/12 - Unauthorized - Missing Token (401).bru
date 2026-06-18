@@ -1,0 +1,18 @@
+meta {
+  name: Unauthorized - Missing Token (401)
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/notification_events
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+  res.body.code: eq UNAUTHORIZED
+  res.body.message: isDefined
+  res.body.traceId: isDefined
+}

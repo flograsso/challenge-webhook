@@ -1,0 +1,33 @@
+meta {
+  name: List Events - Pagination
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/notification_events?page=1&pageSize=2
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.page: eq 1
+  res.body.pageSize: eq 2
+  res.body.data: isArray
+}
+
+tests {
+  test("page has at most pageSize items", function() {
+    expect(res.body.data.length).to.be.lte(2);
+  });
+
+  test("totalPages is consistent with totalItems", function() {
+    const { totalItems, pageSize, totalPages } = res.body;
+    expect(totalPages).to.equal(Math.ceil(totalItems / pageSize));
+  });
+}

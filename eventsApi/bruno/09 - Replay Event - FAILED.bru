@@ -1,0 +1,38 @@
+meta {
+  name: Replay Event - FAILED (CLIENT002/EVT003)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/notification_events/EVT003/replay
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient002}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.eventId: eq EVT003
+  res.body.deliveryStatus: isDefined
+  res.body.retryCount: isNumber
+  res.body.deliveryDate: isDefined
+  res.body.clientId: isUndefined
+}
+
+tests {
+  test("retryCount incremented", function() {
+    expect(res.body.retryCount).to.be.gte(1);
+  });
+
+  test("deliveryStatus is COMPLETED or FAILED", function() {
+    expect(["COMPLETED", "FAILED"]).to.include(res.body.deliveryStatus);
+  });
+
+  test("httpStatusCode is present", function() {
+    expect(res.body.httpStatusCode).to.not.be.null;
+  });
+}

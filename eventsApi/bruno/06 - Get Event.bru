@@ -1,0 +1,25 @@
+meta {
+  name: Get Event
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/notification_events/EVT001
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.eventId: eq EVT001
+  res.body.eventType: isDefined
+  res.body.content: isDefined
+  res.body.deliveryStatus: isDefined
+  res.body.creationDate: isDefined
+  res.body.clientId: isUndefined
+}

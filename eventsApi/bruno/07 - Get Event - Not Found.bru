@@ -1,0 +1,22 @@
+meta {
+  name: Get Event - Not Found
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/notification_events/EVT_NONEXISTENT
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq EVENT_NOT_FOUND
+  res.body.message: isDefined
+  res.body.traceId: isDefined
+}

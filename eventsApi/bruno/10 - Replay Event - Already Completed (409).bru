@@ -1,0 +1,22 @@
+meta {
+  name: Replay Event - Already Completed (409)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/notification_events/EVT001/replay
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 409
+  res.body.code: eq EVENT_ALREADY_COMPLETED
+  res.body.message: isDefined
+  res.body.traceId: isDefined
+}

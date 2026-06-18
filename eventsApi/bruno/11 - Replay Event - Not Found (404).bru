@@ -1,0 +1,22 @@
+meta {
+  name: Replay Event - Not Found (404)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/notification_events/EVT_NONEXISTENT/replay
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq EVENT_NOT_FOUND
+  res.body.message: isDefined
+  res.body.traceId: isDefined
+}

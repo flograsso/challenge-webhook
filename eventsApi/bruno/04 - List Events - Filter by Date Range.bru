@@ -1,0 +1,33 @@
+meta {
+  name: List Events - Filter by Date Range
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/notification_events?dateFrom=2024-03-15T09:00:00Z&dateTo=2024-03-15T12:00:00Z
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("all events are within the date range", function() {
+    const from = new Date("2024-03-15T09:00:00Z").getTime();
+    const to = new Date("2024-03-15T12:00:00Z").getTime();
+    const data = res.body.data;
+    data.forEach(event => {
+      const ts = new Date(event.creationDate).getTime();
+      expect(ts).to.be.gte(from);
+      expect(ts).to.be.lte(to);
+    });
+  });
+}

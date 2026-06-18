@@ -1,0 +1,20 @@
+meta {
+  name: Get Event - Wrong Client (isolation check)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/notification_events/EVT003
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{jwtClient001}}
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq EVENT_NOT_FOUND
+}
