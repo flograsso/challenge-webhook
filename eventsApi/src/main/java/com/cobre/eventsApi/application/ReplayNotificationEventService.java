@@ -42,7 +42,7 @@ public class ReplayNotificationEventService implements ReplayNotificationEventUs
                 event.content(),
                 result.success() ? DeliveryStatus.COMPLETED : DeliveryStatus.FAILED,
                 event.creationDate(),
-                Instant.now(),
+                result.success() ? Instant.now() : null,
                 event.clientId(),
                 event.retryCount() + 1,
                 result.httpStatusCode(),
