@@ -1,0 +1,513 @@
+openapi: 3.0.3
+info:
+  title: Cobre — Event Notifications API
+  description: |
+    Self-service API that allows clients to query their event notification history
+    and replay failed deliveries.
+
+    ## Authentication
+    All endpoints require a **Bearer JWT** in the `Authorization` header.
+    The token is issued by Cobre's identity provider and encodes the `client_id`
+    claim. Every query is automatically scoped to the authenticated client —
+    clients cannot access each other's notifications.
+
+    ## Pagination
+    List endpoints return paginated results. Use `page` (1-based) and `pageSize`
+    to navigate. The response envelope always includes `pagination` metadata.
+  version: 1.0.0
+  contact:
+    name: Cobre Platform Team
+
+servers:
+  - url: https://api.cobre.co/v1
+    description: Production
+  - url: https://api.sandbox.cobre.co/v1
+    description: Sandbox
+
+tags:
+  - name: Notification Events
+    description: Query and manage event notification deliveries
+
+security:
+  - BearerAuth: []
+
+paths:
+
+  # ─────────────────────────────────────────────────────────────
+  # GET /notification_events
+  # ─────────────────────────────────────────────────────────────
+  /notification_events:
+    get:
+      tags: [Notification Events]
+      summary: List notification events
+      operationId: listNotificationEvents
+      description: |
+        Returns a paginated list of notification events belonging to the
+        authenticated client. Results can be filtered by creation date range
+        and one or more delivery statuses.
+
+        The `client_id` is always inferred from the JWT — it cannot be
+        overridden by the caller.
+      parameters:
+        - name: dateFrom
+          in: query
+          required: false
+          description: |
+            Lower bound for `creation_date` (inclusive). ISO 8601 date-time.
+            Example: `2024-03-01T00:00:00Z`
+          schema:
+            type: string
+            format: date-time
+          example: "2024-03-01T00:00:00Z"
+
+        - name: dateTo
+          in: query
+          required: false
+          description: |
+            Upper bound for `creation_date` (inclusive). ISO 8601 date-time.
+            Must be >= `dateFrom` when both are provided.
+            Example: `2024-03-31T23:59:59Z`
+          schema:
+            type: string
+            format: date-time
+          example: "2024-03-31T23:59:59Z"
+
+        - name: status
+          in: query
+          required: false
+          description: |
+            Filter by one or more delivery statuses. Repeat the parameter
+            to pass multiple values:
+            `?status=FAILED&status=PENDING`
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/DeliveryStatus'
+          example: [FAILED, PENDING]
+
+        - name: page
+          in: query
+          required: false
+          description: Page number (1-based).
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+
+        - name: pageSize
+          in: query
+          required: false
+          description: Number of items per page. Max 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+
+      responses:
+        "200":
+          description: Paginated list of notification events.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationEventPage'
+              example:
+                data:
+                  - event_id: "EVT001"
+                    event_type: "credit_card_payment"
+                    content: "Credit card payment received for $150.00"
+                    delivery_status: "COMPLETED"
+                    creation_date: "2024-03-15T09:00:00Z"
+                    delivery_date: "2024-03-15T09:30:22Z"
+                    retry_count: 0
+                  - event_id: "EVT003"
+                    event_type: "credit_transfer"
+                    content: "Bank transfer received from Account #4567 for $1,500.00"
+                    delivery_status: "FAILED"
+                    creation_date: "2024-03-15T11:00:00Z"
+                    delivery_date: "2024-03-15T11:20:18Z"
+                    retry_count: 3
+                    http_status_code: 503
+                    error_details: "Webhook endpoint unavailable"
+                pagination:
+                  page: 1
+                  pageSize: 20
+                  totalItems: 2
+                  totalPages: 1
+
+        "400":
+          description: |
+            Invalid query parameters. Examples:
+            - `dateTo` is before `dateFrom`
+            - `pageSize` exceeds maximum
+            - Unknown `status` value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "INVALID_PARAMETER"
+                message: "dateTo must be greater than or equal to dateFrom"
+                traceId: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"
+
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+  # ─────────────────────────────────────────────────────────────
+  # GET /notification_events/{notification_event_id}
+  # ─────────────────────────────────────────────────────────────
+  /notification_events/{notification_event_id}:
+    get:
+      tags: [Notification Events]
+      summary: Get a notification event by ID
+      operationId: getNotificationEvent
+      description: |
+        Returns the full detail of a single notification event.
+
+        Returns `404` if the event does not exist **or** does not belong to
+        the authenticated client (ownership is never revealed to the caller
+        to avoid enumeration attacks).
+      parameters:
+        - $ref: '#/components/parameters/NotificationEventId'
+
+      responses:
+        "200":
+          description: Notification event detail.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationEventDetail'
+              example:
+                event_id: "EVT003"
+                event_type: "credit_transfer"
+                content: "Bank transfer received from Account #4567 for $1,500.00"
+                delivery_status: "FAILED"
+                creation_date: "2024-03-15T11:00:00Z"
+                delivery_date: "2024-03-15T11:20:18Z"
+                retry_count: 3
+                next_retry_at: null
+                http_status_code: 503
+                error_details: "Webhook endpoint returned 503 Service Unavailable"
+
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+        "404":
+          description: |
+            Event not found. Returned both when the event does not exist and
+            when it belongs to a different client (avoids ID enumeration).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "EVENT_NOT_FOUND"
+                message: "Notification event 'EVT003' not found"
+                traceId: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"
+
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+  # ─────────────────────────────────────────────────────────────
+  # POST /notification_events/{notification_event_id}/replay
+  # ─────────────────────────────────────────────────────────────
+  /notification_events/{notification_event_id}/replay:
+    post:
+      tags: [Notification Events]
+      summary: Replay a failed notification event
+      operationId: replayNotificationEvent
+      description: |
+        Re-queues a notification event for delivery. Only events in `FAILED`
+        status can be replayed.
+
+        **Pre-conditions checked before accepting the request:**
+        - Event must exist and belong to the authenticated client (`404` otherwise).
+        - Event status must be `FAILED` — replaying `COMPLETED` events returns
+          `409 Conflict`; replaying events already in `PENDING` or `RETRYING`
+          returns `422 Unprocessable Entity` to avoid duplicate deliveries.
+
+        On success the event status transitions to `PENDING` and the delivery
+        pipeline picks it up asynchronously. The response returns the updated
+        event snapshot.
+      parameters:
+        - $ref: '#/components/parameters/NotificationEventId'
+
+      requestBody:
+        required: false
+        description: Optional replay configuration.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplayRequest'
+
+      responses:
+        "202":
+          description: |
+            Replay accepted. The event has been re-queued for asynchronous
+            delivery. Use `GET /notification_events/{id}` to poll the updated
+            status.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/XRequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationEventDetail'
+              example:
+                event_id: "EVT003"
+                event_type: "credit_transfer"
+                content: "Bank transfer received from Account #4567 for $1,500.00"
+                delivery_status: "PENDING"
+                creation_date: "2024-03-15T11:00:00Z"
+                delivery_date: null
+                retry_count: 0
+                next_retry_at: "2024-03-16T08:00:00Z"
+                http_status_code: null
+                error_details: null
+
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+        "404":
+          description: Event not found or does not belong to the authenticated client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "EVENT_NOT_FOUND"
+                message: "Notification event 'EVT003' not found"
+                traceId: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"
+
+        "409":
+          description: |
+            The event has already been successfully delivered (`COMPLETED`).
+            Replaying a completed event is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "EVENT_ALREADY_COMPLETED"
+                message: "Notification event 'EVT001' was already delivered successfully and cannot be replayed"
+                traceId: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"
+
+        "422":
+          description: |
+            The event is already in `PENDING` or `RETRYING` status — a delivery
+            attempt is already in progress. Wait for it to settle before replaying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "EVENT_ALREADY_IN_PROGRESS"
+                message: "Notification event 'EVT005' is currently in RETRYING status. Wait for the current attempt to settle before replaying."
+                traceId: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"
+
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Components
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT issued by Cobre's identity provider. Must include a `client_id`
+        claim. All resources are automatically scoped to this value.
+
+  parameters:
+    NotificationEventId:
+      name: notification_event_id
+      in: path
+      required: true
+      description: Unique identifier of the notification event.
+      schema:
+        type: string
+      example: "EVT003"
+
+  headers:
+    XRequestID:
+      description: Unique ID for this request, useful for distributed tracing.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+
+    DeliveryStatus:
+      type: string
+      enum: [PENDING, COMPLETED, FAILED, RETRYING]
+      description: |
+        - `PENDING`   — created, not yet attempted.
+        - `COMPLETED` — delivered successfully.
+        - `FAILED`    — all retry attempts exhausted.
+        - `RETRYING`  — a retry is currently scheduled or in-flight.
+
+    NotificationEventSummary:
+      type: object
+      description: Lightweight view returned in list responses.
+      required:
+        - event_id
+        - event_type
+        - content
+        - delivery_status
+        - creation_date
+      properties:
+        event_id:
+          type: string
+          example: "EVT001"
+        event_type:
+          type: string
+          example: "credit_card_payment"
+        content:
+          type: string
+          description: Human-readable description of the originating event.
+          example: "Credit card payment received for $150.00"
+        delivery_status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        creation_date:
+          type: string
+          format: date-time
+          description: When the notification was created in the platform.
+          example: "2024-03-15T09:00:00Z"
+        delivery_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the last delivery attempt was made. Null if never attempted.
+          example: "2024-03-15T09:30:22Z"
+        retry_count:
+          type: integer
+          minimum: 0
+          description: Total number of delivery attempts made so far.
+          example: 0
+
+    NotificationEventDetail:
+      allOf:
+        - $ref: '#/components/schemas/NotificationEventSummary'
+        - type: object
+          description: Full detail view, including failure diagnostics.
+          properties:
+            next_retry_at:
+              type: string
+              format: date-time
+              nullable: true
+              description: Scheduled time for the next retry. Null when not in RETRYING status.
+              example: null
+            http_status_code:
+              type: integer
+              nullable: true
+              description: HTTP status code returned by the webhook endpoint on the last attempt.
+              example: 503
+            error_details:
+              type: string
+              nullable: true
+              description: Error message or response body from the failed delivery attempt.
+              example: "Webhook endpoint returned 503 Service Unavailable"
+
+    NotificationEventPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationEventSummary'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page:
+          type: integer
+          description: Current page number (1-based).
+          example: 1
+        pageSize:
+          type: integer
+          description: Items per page as requested.
+          example: 20
+        totalItems:
+          type: integer
+          description: Total number of items matching the applied filters.
+          example: 47
+        totalPages:
+          type: integer
+          description: Total number of pages given the current pageSize.
+          example: 3
+
+    ReplayRequest:
+      type: object
+      description: |
+        Optional body for replay. If omitted, the event is re-queued with
+        the original webhook URL configured in the client's subscription.
+      properties:
+        reset_retry_count:
+          type: boolean
+          default: true
+          description: |
+            When true (default) the `retry_count` is reset to 0 so the full
+            retry budget is available again. Set to false to keep the existing count.
+
+    ErrorResponse:
+      type: object
+      required: [code, message, traceId]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: "EVENT_NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable explanation.
+          example: "Notification event 'EVT003' not found"
+        traceId:
+          type: string
+          format: uuid
+          description: Correlation ID for support and distributed tracing.
+          example: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"
+
+  responses:
+    Unauthorized:
+      description: |
+        Missing, expired, or invalid Bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "UNAUTHORIZED"
+            message: "Bearer token is missing or has expired"
+            traceId: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"
+
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "INTERNAL_ERROR"
+            message: "An unexpected error occurred. Please retry or contact support."
+            traceId: "8b3f2c1a-4d5e-6789-abcd-ef0123456789"

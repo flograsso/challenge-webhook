@@ -120,9 +120,47 @@ cobre_challenge/
 
 ---
 
+## Self-Service API
+
+Full spec: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.0.3)
+
+All endpoints require a **Bearer JWT** in `Authorization`. The `client_id` is always extracted from the token — clients cannot query each other's events.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/notification_events` | List events with optional filters and pagination |
+| `GET` | `/notification_events/{id}` | Get full detail of a single event |
+| `POST` | `/notification_events/{id}/replay` | Re-queue a failed event for delivery |
+
+### Query parameters — `GET /notification_events`
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `dateFrom` | `date-time` | No | Lower bound on `creation_date` (inclusive) |
+| `dateTo` | `date-time` | No | Upper bound on `creation_date` (inclusive) |
+| `status` | `enum[]` | No | One or more statuses: repeat param (`?status=FAILED&status=PENDING`) |
+| `page` | `integer` | No | Page number, 1-based (default: 1) |
+| `pageSize` | `integer` | No | Items per page, max 100 (default: 20) |
+
+### HTTP response codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Success |
+| `202` | Replay accepted (async processing) |
+| `400` | Invalid query parameters |
+| `401` | Missing or expired Bearer token |
+| `404` | Event not found or not owned by the caller |
+| `409` | Event already `COMPLETED` — cannot replay |
+| `422` | Event is `PENDING` or `RETRYING` — already in-flight |
+| `500` | Unexpected server error |
+
+---
+
 ## Progress
 
 - [x] Data model — ERD diagram
+- [x] Self-service API — OpenAPI 3.0 spec
 - [ ] Task 1 — System Design
 - [ ] Task 2 — API implementation (Spring Boot, Hexagonal Architecture)
 - [ ] Task 3 — Security analysis (OWASP Top 10)
