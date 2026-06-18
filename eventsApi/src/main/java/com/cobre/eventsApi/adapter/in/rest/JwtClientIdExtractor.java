@@ -23,7 +23,7 @@ public class JwtClientIdExtractor {
 
         String token = authorizationHeader.substring(7);
         String[] parts = token.split("\\.");
-        if (parts.length < 2) {
+        if (parts.length < 3) {
             throw new InvalidTokenException("Malformed JWT token");
         }
 
