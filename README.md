@@ -34,6 +34,8 @@ Identify at least 3 OWASP Top 10 vulnerabilities and propose mitigations.
 
 > Source: [`docs/erd.puml`](docs/erd.puml)
 
+![ERD - Cobre Notifications](docs/erd.png)
+
 ```plantuml
 @startuml ERD - Cobre Notifications
 
