@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 
 @RestControllerAdvice
@@ -37,6 +38,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     public ErrorResponse handleAlreadyInProgress(EventAlreadyInProgressException ex) {
         return new ErrorResponse("EVENT_ALREADY_IN_PROGRESS", ex.getMessage(), UUID.randomUUID().toString());
+    }
+
+    @ExceptionHandler(DateTimeParseException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleBadDate(DateTimeParseException ex) {
+        return new ErrorResponse("INVALID_DATE_FORMAT", ex.getMessage(), UUID.randomUUID().toString());
     }
 
     @ExceptionHandler(Exception.class)
