@@ -239,26 +239,16 @@ paths:
           `409 Conflict`; replaying events already in `PENDING` or `RETRYING`
           returns `422 Unprocessable Entity` to avoid duplicate deliveries.
 
-        On success the event status transitions to `PENDING` and the delivery
-        pipeline picks it up asynchronously. The response returns the updated
-        event snapshot.
+        The delivery is executed synchronously. The response returns the updated
+        event snapshot reflecting the outcome of the attempt (`COMPLETED` or `FAILED`).
       parameters:
         - $ref: '#/components/parameters/NotificationEventId'
 
-      requestBody:
-        required: false
-        description: Optional replay configuration.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReplayRequest'
-
       responses:
-        "202":
+        "200":
           description: |
-            Replay accepted. The event has been re-queued for asynchronous
-            delivery. Use `GET /notification_events/{id}` to poll the updated
-            status.
+            Replay executed synchronously. The event delivery was attempted
+            immediately. The response reflects the updated event state.
           headers:
             X-Request-ID:
               $ref: '#/components/headers/XRequestID'
@@ -270,12 +260,12 @@ paths:
                 event_id: "EVT003"
                 event_type: "credit_transfer"
                 content: "Bank transfer received from Account #4567 for $1,500.00"
-                delivery_status: "PENDING"
+                delivery_status: "COMPLETED"
                 creation_date: "2024-03-15T11:00:00Z"
-                delivery_date: null
-                retry_count: 0
-                next_retry_at: "2024-03-16T08:00:00Z"
-                http_status_code: null
+                delivery_date: "2024-03-16T08:01:05Z"
+                retry_count: 4
+                next_retry_at: null
+                http_status_code: 200
                 error_details: null
 
         "401":
@@ -456,19 +446,6 @@ components:
           type: integer
           description: Total number of pages given the current pageSize.
           example: 3
-
-    ReplayRequest:
-      type: object
-      description: |
-        Optional body for replay. If omitted, the event is re-queued with
-        the original webhook URL configured in the client's subscription.
-      properties:
-        reset_retry_count:
-          type: boolean
-          default: true
-          description: |
-            When true (default) the `retry_count` is reset to 0 so the full
-            retry budget is available again. Set to false to keep the existing count.
 
     ErrorResponse:
       type: object

@@ -147,7 +147,6 @@ All endpoints require a **Bearer JWT** in `Authorization`. The `client_id` is al
 | Code | Meaning |
 |------|---------|
 | `200` | Success |
-| `202` | Replay accepted (async processing) |
 | `400` | Invalid query parameters |
 | `401` | Missing or expired Bearer token |
 | `404` | Event not found or not owned by the caller |
