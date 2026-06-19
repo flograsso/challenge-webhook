@@ -35,33 +35,6 @@ Using **Hexagonal Architecture** and **Java Spring Boot**:
 
 Sample data: [`data/notification_events.json`](data/notification_events.json)
 
-### Task 3 — Security
-
-Three OWASP Top 10 vulnerabilities identified for this API and their mitigations:
-
-#### A08 — Software and Data Integrity Failures
-
-When Cobre delivers a webhook notification to a client's URL, the receiver has no way to verify the payload actually came from Cobre and wasn't tampered with in transit.
-
-**Mitigation:** Each client subscription stores a `secret_key`. Before delivering the webhook, the platform computes an HMAC-SHA256 signature of the request body using that key and includes it in a `X-Cobre-Signature` header. The client verifies the signature on their end before processing the payload.
-
-```
-X-Cobre-Signature: sha256=<hmac_hex>
-```
-
-#### A10 — Server-Side Request Forgery (SSRF)
-
-The platform makes outbound HTTP requests to client-configured `webhook_url` values. A malicious client could register a URL pointing to an internal service (`http://10.0.0.1/admin`, `http://169.254.169.254/latest/meta-data/`) causing the platform to unknowingly proxy requests to internal infrastructure.
-
-**Mitigation:** Maintain an allowlist of permitted webhook URL patterns. Enforce HTTPS-only. Reject URLs that resolve to private, loopback, or link-local IP ranges (RFC 1918 / RFC 3927) before making any outbound request.
-
-#### A02 — Cryptographic Failures / Sensitive Data Exposure
-
-Without authentication, any caller could query any client's notification history, exposing transaction details and event content.
-
-**Mitigation:** All endpoints require a Bearer JWT. The `client_id` claim is extracted from the token and used to scope every query — a client can only access its own events. While this implementation parses the JWT payload without validating the signature (acceptable for this challenge scope), in production the signature must be verified against the identity provider's public key to guarantee the token wasn't forged.
-
----
 
 ## Data Model
 
@@ -223,8 +196,32 @@ infrastructure/← BeanConfig wires adapters to use cases
 
 Storage is a JSON file (`data/notification_events.json`) loaded into memory at startup. The `NotificationEventRepository` port abstracts the storage so a real database can be plugged in without touching domain or application code.
 
----
 
 ## Security analysis (OWASP Top 10)
+
+Three OWASP Top 10 vulnerabilities identified for this API and their mitigations:
+
+#### A08 — Software and Data Integrity Failures
+
+When Cobre delivers a webhook notification to a client's URL, the receiver has no way to verify the payload actually came from Cobre and wasn't tampered with in transit.
+
+**Mitigation:** Each client subscription stores a `secret_key`. Before delivering the webhook, the platform computes an HMAC-SHA256 signature of the request body using that key and includes it in a `X-Cobre-Signature` header. The client verifies the signature on their end before processing the payload.
+
+```
+X-Cobre-Signature: sha256=<hmac_hex>
+```
+
+#### A10 — Server-Side Request Forgery (SSRF)
+
+The platform makes outbound HTTP requests to client-configured `webhook_url` values. A malicious client could register a URL pointing to an internal service (`http://10.0.0.1/admin`, `http://169.254.169.254/latest/meta-data/`) causing the platform to unknowingly proxy requests to internal infrastructure.
+
+**Mitigation:** Maintain an allowlist of permitted webhook URL patterns. Enforce HTTPS-only. Reject URLs that resolve to private, loopback, or link-local IP ranges (RFC 1918 / RFC 3927) before making any outbound request.
+
+#### A02 — Cryptographic Failures / Sensitive Data Exposure
+
+Without authentication, any caller could query any client's notification history, exposing transaction details and event content.
+
+**Mitigation:** All endpoints require a Bearer JWT. The `client_id` claim is extracted from the token and used to scope every query — a client can only access its own events. While this implementation parses the JWT payload without validating the signature (acceptable for this challenge scope), in production the signature must be verified against the identity provider's public key to guarantee the token wasn't forged.
+
 
 

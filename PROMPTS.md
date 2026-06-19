@@ -59,6 +59,11 @@ PlantUML rendered to `docs/erd.png` and embedded in README.
 > - `GET /notification_events` — filters: `dateFrom`, `dateTo`, `status` (multi-value), pagination (`page`, `pageSize`). Auth: Bearer JWT. Returns paginated list.
 > - `GET /notification_events/{id}` — single event. Auth: Bearer JWT.
 > - `POST /notification_events/{id}/replay` — re-queue failed event. Auth: Bearer JWT. Returns 202.
+> - 1. Para el primero quiero agregar queryparams opcionales que permitan filtrar por creation date. Deben ser dateFrom y dateAt. Tambien otro filtro que permita enviar 1 o mas status para filtrar. Por ultimo se debe poder enviar el numero de pagina dado que la respuesta debe ser paginada. Para la response basarse en el json del proyecto sumando el dato del paginado.
+> - 2. Este es un simple get por id
+> - 3. Este endpoint debe permitir reprocesar un evento,  debe validar antes que su estado no sea completado.
+   Todos los endpoints deben recibir un acces token para validar la identidad de quien hace el request e internamente debe filtrar siempre por el owner de los recursos consultados. Ademas se deben documentar los codigos http de respuesta frente a errores (404 frente a evento no encontado, 401 por no tener acceso al event_id, 409 si el evento ya fue procesado, etc.
+   Si ves mejoras sugierelas
 
 OpenAPI 3.0.3 spec created at `docs/openapi.yaml`.
 
