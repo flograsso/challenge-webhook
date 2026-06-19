@@ -17,6 +17,14 @@ Design a scalable and resilient solution covering:
 - **Delivery of event notifications** via webhook to a client-specific URL.
 - **Self-service API** for clients to query and replay their notifications.
 
+![System Design — Event Delivery Flow](docs/system-design-event-delivery.png)
+
+**Event creation flow:** Platform services (PaymentService, RefundService, etc.) publish events with `{event_type, client_id, content}` to an **event creation queue**. A consumer validates that the client has an active subscription for that `event_type` and, if so, persists the event and enqueues its `event_id` in the **event processing queue**.
+
+**Event processing flow:** A worker picks up the `event_id`, loads the full event from DB, validates it hasn't already been processed (idempotency guard), delivers the webhook via HTTPS, and updates the DB with the result.
+
+**Retry strategy:** On delivery failure the event is routed to an **error queue**. Re-enqueued with exponential backoff to avoid overwhelming the client endpoint. Two alternatives considered: multiple queues with fixed delays per level, or a single queue where the worker reads `next_retry_at` from DB before attempting delivery.
+
 ### Task 2 — API Implementation
 Using **Hexagonal Architecture** and **Java Spring Boot**:
 - Consume events and deliver them to the appropriate webhook endpoint via HTTPS.
@@ -154,6 +162,27 @@ cd eventsApi
 ```
 
 22 tests: 7 unit (ListService) + 7 unit (ReplayService) + 7 integration (Controller) + 1 smoke.
+
+**Bruno collection** (manual / exploratory testing):
+
+The [`bruno/`](bruno/) folder contains a ready-to-use [Bruno](https://www.usebruno.com/) collection with 14 requests covering all endpoints, filters, error codes and auth scenarios. Open the `bruno/` folder as a collection in Bruno and select the `local` environment.
+
+| # | Request | Scenario |
+|---|---------|----------|
+| 01 | List Events | Happy path |
+| 02 | List Events — Filter by Status | `?status=FAILED` |
+| 03 | List Events — Multi Status Filter | `?status=FAILED&status=PENDING` |
+| 04 | List Events — Filter by Date Range | `dateFrom` / `dateTo` |
+| 05 | List Events — Pagination | `page` / `pageSize` |
+| 06 | Get Event | Happy path |
+| 07 | Get Event — Not Found | 404 |
+| 08 | Get Event — Wrong Client | Ownership isolation |
+| 09 | Replay Event — FAILED | Happy path |
+| 10 | Replay Event — Already Completed | 409 |
+| 11 | Replay Event — Not Found | 404 |
+| 12 | Unauthorized — Missing Token | 401 |
+| 13 | Unauthorized — Malformed Token | 401 |
+| 14 | Bad Request — Invalid Date Format | 400 |
 
 ---
 
