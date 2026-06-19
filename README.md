@@ -4,7 +4,7 @@
 
 Cobre is a transactional, cloud-native, event-driven and microservices platform that manages resources for clients (accounts, payments, transactions). This challenge designs and implements a **webhook-based event notification system**.
 
-Full requirements: [`docs/Sr_Software_Engineer_Case_-_Notifications.pdf`](docs/Sr_Software_Engineer_Case_-_Notifications.pdf)
+Full requirements: [`eventsApi/docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf`](eventsApi/docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf)
 
 ---
 
@@ -23,7 +23,7 @@ Using **Hexagonal Architecture** and **Java Spring Boot**:
   - `GET /notification_events/{id}` — single event detail.
   - `POST /notification_events/{id}/replay` — re-send a failed notification.
 
-Sample data: [`docs/notification_events.json`](docs/notification_events.json)
+Sample data: [`eventsApi/data/notification_events.json`](eventsApi/data/notification_events.json)
 
 ### Task 3 — Security
 Identify at least 3 OWASP Top 10 vulnerabilities and propose mitigations.
@@ -32,60 +32,9 @@ Identify at least 3 OWASP Top 10 vulnerabilities and propose mitigations.
 
 ## Data Model
 
-> Source: [`docs/erd.puml`](docs/erd.puml)
+> Source: [`eventsApi/docs/erd.puml`](eventsApi/docs/erd.puml)
 
-![ERD - Cobre Notifications](docs/erd.png)
-
-```plantuml
-@startuml ERD - Cobre Notifications
-
-entity "clients" {
-  * client_id : UUID <<PK>>
-  --
-  name : VARCHAR(255)
-  email : VARCHAR(255)
-  created_at : TIMESTAMP
-  is_active : BOOLEAN
-}
-
-entity "event_type" {
-  * id : BIGINT <<PK, AI>>
-  --
-  name : VARCHAR(100)
-}
-
-entity "event_subscriptions" {
-  * client_id : UUID <<PK, FK>>
-  * event_type_id : BIGINT <<PK, FK>>
-  --
-  webhook_url : VARCHAR(500)
-  is_active : BOOLEAN
-  created_at : TIMESTAMP
-  secret_key : VARCHAR(255)
-}
-
-entity "event_notifications" {
-  * event_id : BIGINT <<PK, AI>>
-  --
-  client_id : UUID <<FK>>
-  event_type_id : BIGINT <<FK>>
-  creation_date : TIMESTAMP
-  delivery_date : TIMESTAMP
-  delivery_status : ENUM(PENDING, COMPLETED, FAILED, RETRYING)
-  context : TEXT
-  retry_count : INT
-  next_retry_at : TIMESTAMP
-  http_status_code : INT
-  error_details : TEXT
-}
-
-clients ||--o{ event_subscriptions : "suscribe a"
-event_type ||--o{ event_subscriptions : "suscripta por"
-clients ||--o{ event_notifications : "recibe"
-event_type ||--o{ event_notifications : "genera"
-
-@enduml
-```
+![ERD - Cobre Notifications](eventsApi/docs/erd.png)
 
 ### Table Descriptions
 
@@ -110,19 +59,30 @@ event_type ||--o{ event_notifications : "genera"
 ## Repository Structure
 
 ```
-cobre_challenge/
+challenge-webhook/
 ├── README.md
-└── docs/
-    ├── erd.puml                                    # PlantUML entity-relationship diagram
-    ├── notification_events.json                    # Sample notification events data
-    └── Sr_Software_Engineer_Case_-_Notifications.pdf  # Original challenge spec
+└── eventsApi/                          # Spring Boot application (Java 26)
+    ├── src/
+    │   ├── main/java/com/cobre/eventsApi/
+    │   │   ├── domain/                 # Entities, ports, exceptions
+    │   │   ├── application/            # Use case services
+    │   │   ├── adapter/                # REST controllers, JSON storage, webhook HTTP
+    │   │   └── infrastructure/         # Spring configuration (BeanConfig)
+    │   └── test/
+    ├── data/
+    │   └── notification_events.json    # Sample data (10 events, 3 clients)
+    ├── docs/
+    │   ├── openapi.yaml                # OpenAPI 3.0.3 spec
+    │   ├── erd.puml / erd.png          # Entity-relationship diagram
+    │   └── Sr_Software_Engineer_Case_-_Notifications_(1).pdf
+    └── bruno/                          # Bruno API collection for manual testing
 ```
 
 ---
 
 ## Self-Service API
 
-Full spec: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.0.3)
+Full spec: [`eventsApi/docs/openapi.yaml`](eventsApi/docs/openapi.yaml) (OpenAPI 3.0.3)
 
 All endpoints require a **Bearer JWT** in `Authorization`. The `client_id` is always extracted from the token — clients cannot query each other's events.
 
@@ -156,10 +116,64 @@ All endpoints require a **Bearer JWT** in `Authorization`. The `client_id` is al
 
 ---
 
+## Running the API
+
+**Prerequisites:** Java 26, Gradle
+
+```bash
+cd eventsApi
+./gradlew bootRun
+```
+
+The API starts on `http://localhost:8080`.
+
+**Generate a test JWT** (no signature validation — `client_id` extracted from payload):
+
+```bash
+# CLIENT001 token
+TOKEN="eyJhbGciOiJub25lIn0.eyJjbGllbnRfaWQiOiJDTElFTlQwMDEifQ."
+
+# List events
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/notification_events
+
+# Get single event
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/notification_events/EVT001
+
+# Replay a failed event
+curl -X POST -H "Authorization: Bearer $TOKEN" http://localhost:8080/notification_events/EVT003/replay
+```
+
+**Run tests:**
+
+```bash
+cd eventsApi
+./gradlew test
+```
+
+22 tests: 7 unit (ListService) + 7 unit (ReplayService) + 7 integration (Controller) + 1 smoke.
+
+---
+
+## Architecture
+
+Hexagonal (Ports & Adapters):
+
+```
+domain/        ← Pure Java: records, enums, port interfaces, exceptions
+application/   ← Use case services (plain Java, no Spring annotations)
+adapter/in/    ← REST controller, JWT extractor, exception handler, DTOs
+adapter/out/   ← JSON file storage, HTTP webhook delivery (RestClient)
+infrastructure/← BeanConfig wires adapters to use cases
+```
+
+Storage is a JSON file (`data/notification_events.json`) loaded into memory at startup. The `NotificationEventRepository` port abstracts the storage so a real database can be plugged in without touching domain or application code.
+
+---
+
 ## Progress
 
 - [x] Data model — ERD diagram
 - [x] Self-service API — OpenAPI 3.0 spec
-- [ ] Task 1 — System Design
-- [ ] Task 2 — API implementation (Spring Boot, Hexagonal Architecture)
+- [x] Task 2 — API implementation (Spring Boot 4.1.0, Java 26, Hexagonal Architecture)
+- [ ] Task 1 — System Design document
 - [ ] Task 3 — Security analysis (OWASP Top 10)
