@@ -11,7 +11,14 @@ get {
 }
 
 headers {
-  Authorization: Bearer {{jwtClient001}}
+  Authorization: Bearer {{jwtClient003}}
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:8080
+  jwtClient001: eyJhbGciOiJub25lIn0.eyJjbGllbnRfaWQiOiJDTElFTlQwMDEifQ.
+  jwtClient002: eyJhbGciOiJub25lIn0.eyJjbGllbnRfaWQiOiJDTElFTlQwMDIifQ.
+  jwtClient003: eyJhbGciOiJub25lIn0.eyJjbGllbnRfaWQiOiJDTElFTlQwMDMifQ.
 }
 
 assert {
