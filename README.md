@@ -4,7 +4,7 @@
 
 Cobre is a transactional, cloud-native, event-driven and microservices platform that manages resources for clients (accounts, payments, transactions). This challenge designs and implements a **webhook-based event notification system**.
 
-Full requirements: [`eventsApi/docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf`](eventsApi/docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf)
+Full requirements: [`docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf`](docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf)
 
 ---
 
@@ -23,7 +23,7 @@ Using **Hexagonal Architecture** and **Java Spring Boot**:
   - `GET /notification_events/{id}` — single event detail.
   - `POST /notification_events/{id}/replay` — re-send a failed notification.
 
-Sample data: [`eventsApi/data/notification_events.json`](eventsApi/data/notification_events.json)
+Sample data: [`data/notification_events.json`](data/notification_events.json)
 
 ### Task 3 — Security
 Identify at least 3 OWASP Top 10 vulnerabilities and propose mitigations.
@@ -32,9 +32,9 @@ Identify at least 3 OWASP Top 10 vulnerabilities and propose mitigations.
 
 ## Data Model
 
-> Source: [`eventsApi/docs/erd.puml`](eventsApi/docs/erd.puml)
+> Source: [`docs/erd.puml`](docs/erd.puml)
 
-![ERD - Cobre Notifications](eventsApi/docs/erd.png)
+![ERD - Cobre Notifications](docs/erd.png)
 
 ### Table Descriptions
 
@@ -61,28 +61,29 @@ Identify at least 3 OWASP Top 10 vulnerabilities and propose mitigations.
 ```
 challenge-webhook/
 ├── README.md
-└── eventsApi/                          # Spring Boot application (Java 26)
-    ├── src/
-    │   ├── main/java/com/cobre/eventsApi/
-    │   │   ├── domain/                 # Entities, ports, exceptions
-    │   │   ├── application/            # Use case services
-    │   │   ├── adapter/                # REST controllers, JSON storage, webhook HTTP
-    │   │   └── infrastructure/         # Spring configuration (BeanConfig)
-    │   └── test/
-    ├── data/
-    │   └── notification_events.json    # Sample data (10 events, 3 clients)
-    ├── docs/
-    │   ├── openapi.yaml                # OpenAPI 3.0.3 spec
-    │   ├── erd.puml / erd.png          # Entity-relationship diagram
-    │   └── Sr_Software_Engineer_Case_-_Notifications_(1).pdf
-    └── bruno/                          # Bruno API collection for manual testing
+├── src/
+│   ├── main/java/com/cobre/eventsApi/
+│   │   ├── domain/                 # Entities, ports, exceptions
+│   │   ├── application/            # Use case services
+│   │   ├── adapter/                # REST controllers, JSON storage, webhook HTTP
+│   │   └── infrastructure/         # Spring configuration (BeanConfig)
+│   └── test/
+├── data/
+│   └── notification_events.json    # Sample data (10 events, 3 clients)
+├── docs/
+│   ├── openapi.yaml                # OpenAPI 3.0.3 spec
+│   ├── erd.puml / erd.png          # Entity-relationship diagram
+│   └── Sr_Software_Engineer_Case_-_Notifications_(1).pdf
+├── bruno/                          # Bruno API collection for manual testing
+├── build.gradle
+└── gradlew
 ```
 
 ---
 
 ## Self-Service API
 
-Full spec: [`eventsApi/docs/openapi.yaml`](eventsApi/docs/openapi.yaml) (OpenAPI 3.0.3)
+Full spec: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.0.3)
 
 All endpoints require a **Bearer JWT** in `Authorization`. The `client_id` is always extracted from the token — clients cannot query each other's events.
 
