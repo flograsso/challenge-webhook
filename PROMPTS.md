@@ -24,7 +24,13 @@ This document records the prompts used to design and implement this project with
 
 ### 1 — ERD Design
 
-> Quiero comenzar un nuevo diseño de un feature, para comenzar lee el pdf para tener contexto del mismo. Quiero comenzar realizando un diagrama uml con plantUML modelando las relaciones de entidades. Mi idea es utilizar una base relacional con las siguientes tablas: `event_type`, `event_subscriptions`, `events_notifications`. Si encuentras mejoras, comentarios o sugerencias a mi diseño dímelas.
+> Quiero comenzar un nuevo diseño de un feature, para comenzar lee el pdf para tener contexto del mismo.
+Quiero comenzar realizando un diagrama uml con plantUML modelando las relaciones de entidades.
+Mi idea es utilizar una base relacional con las siguientes tablas:
+event_type: Con un id primario autoincremental y un name
+event_suscriptions: con client_id como clave primaria y relacionado a una tabla de clients, y una relación 1 a N a event_types. Indicando que un client puede suscribirse a N event_types.
+Y por ultimo una tabla de events_notifications con una clave primaria autoincremental que sea event_id, un delivery_date, delivery_status (ENUM con completed , failed, created),creation_date, event_type (relacionado a la tabla de event_type)., client_id (relacionado a la tabla de clients), context (campo txt libre) .
+Si encuentras mejoras, comentarios o sugerencias a mi diseño dimelas
 
 PlantUML ERD generated. AI suggested adding `retry_count`, `next_retry_at`, `http_status_code`, `error_details`, and `secret_key` fields, plus changing `delivery_status` enum to include `RETRYING`.
 
