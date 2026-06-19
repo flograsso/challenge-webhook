@@ -6,6 +6,8 @@ Cobre is a transactional, cloud-native, event-driven and microservices platform 
 
 Full requirements: [`docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf`](docs/Sr_Software_Engineer_Case_-_Notifications_(1).pdf)
 
+> This project was designed and implemented with AI assistance. See [`PROMPTS.md`](PROMPTS.md) for the full prompt history, model, and tools used.
+
 ---
 
 ## Challenge Overview
