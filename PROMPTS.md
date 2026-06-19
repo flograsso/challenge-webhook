@@ -56,9 +56,9 @@ PlantUML rendered to `docs/erd.png` and embedded in README.
 
 > Ahora quiero continuar con el system design de Event notification self service API. Quiero poder definir el swagger de estos tres endpoints:
 >
-> - `GET /notification_events` — filters: `dateFrom`, `dateTo`, `status` (multi-value), pagination (`page`, `pageSize`). Auth: Bearer JWT. Returns paginated list.
-> - `GET /notification_events/{id}` — single event. Auth: Bearer JWT.
-> - `POST /notification_events/{id}/replay` — re-queue failed event. Auth: Bearer JWT. Returns 202.
+> - `GET /notification_events` 
+> - `GET /notification_events/{id}` 
+> - `POST /notification_events/{id}/replay`
 > - 1. Para el primero quiero agregar queryparams opcionales que permitan filtrar por creation date. Deben ser dateFrom y dateAt. Tambien otro filtro que permita enviar 1 o mas status para filtrar. Por ultimo se debe poder enviar el numero de pagina dado que la respuesta debe ser paginada. Para la response basarse en el json del proyecto sumando el dato del paginado.
 > - 2. Este es un simple get por id
 > - 3. Este endpoint debe permitir reprocesar un evento,  debe validar antes que su estado no sea completado.
